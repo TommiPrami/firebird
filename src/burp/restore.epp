@@ -64,6 +64,10 @@
 #include "../common/dsc_proto.h"
 #include "../common/ThreadStart.h"
 #include "../common/msg_encode.h"
+#include "../common/intlobj_new.h"
+#include "../common/IntlUtil.h"
+#include "../common/CharSet.h"
+#include "../common/unicode_util.h"
 
 using MsgFormat::SafeArg;
 using namespace Firebird;
@@ -156,7 +160,7 @@ bool	get_sql_roles(BurpGlobals* tdgbl);
 bool	get_mapping(BurpGlobals* tdgbl);
 bool	get_db_creator(BurpGlobals* tdgbl);
 bool	get_security_class(BurpGlobals* tdgbl);
-void	get_source_blob(BurpGlobals* tdgbl, ISC_QUAD&, bool);
+void	get_source_blob(BurpGlobals* tdgbl, ISC_QUAD&, bool, void (*postProcess) (BlobBuffer& segment) = nullptr);
 USHORT	get_text(BurpGlobals* tdgbl, TEXT*, ULONG);
 USHORT	get_text2(BurpGlobals* tdgbl, TEXT* text, ULONG length);
 bool	get_trigger(BurpGlobals* tdgbl);
@@ -2721,6 +2725,24 @@ bool get_chk_constraint(BurpGlobals* tdgbl)
 	return true;
 }
 
+static void clearAttributes(BlobBuffer& attr)
+{
+	charset cs;
+	IntlUtil::initAsciiCharset(&cs);
+	AutoPtr<CharSet> ascii(Firebird::CharSet::createInstance(*getDefaultMemoryPool(), 0, &cs));
+
+	IntlUtil::SpecificAttributesMap map;
+	IntlUtil::parseSpecificAttributes(ascii, attr.getCount(), attr.begin(), &map);
+
+	map.remove("ICU-VERSION");
+	map.remove("COLL-VERSION");
+	string currentIcu = UnicodeUtil::getDefaultIcuVersion();
+	map.put("ICU-VERSION", currentIcu);
+
+	string tmp = IntlUtil::generateSpecificAttributes(ascii, map);
+	attr.assign(reinterpret_cast<const UCHAR*>(tmp.c_str()), tmp.length());
+}
+
 bool get_collation(BurpGlobals* tdgbl)
 {
 /**************************************
@@ -2817,7 +2839,7 @@ bool get_collation(BurpGlobals* tdgbl)
 					if (tdgbl->RESTORE_format >= 7)
 					{
 						X.RDB$SPECIFIC_ATTRIBUTES.NULL = FALSE;
-						get_source_blob (tdgbl, X.RDB$SPECIFIC_ATTRIBUTES, false);
+						get_source_blob (tdgbl, X.RDB$SPECIFIC_ATTRIBUTES, false, clearAttributes);
 					}
 					else
 						bad_attribute(scan_next_attr, attribute, msgErr_restore_collation);
@@ -2938,7 +2960,7 @@ bool get_collation(BurpGlobals* tdgbl)
 					if (tdgbl->RESTORE_format >= 7)
 					{
 						X.RDB$SPECIFIC_ATTRIBUTES.NULL = FALSE;
-						get_source_blob (tdgbl, X.RDB$SPECIFIC_ATTRIBUTES, false);
+						get_source_blob (tdgbl, X.RDB$SPECIFIC_ATTRIBUTES, false, clearAttributes);
 					}
 					else
 						bad_attribute(scan_next_attr, attribute, msgErr_restore_collation);
@@ -8831,7 +8853,7 @@ bool get_security_class(BurpGlobals* tdgbl)
 	return true;
 }
 
-void get_source_blob(BurpGlobals* tdgbl, ISC_QUAD& blob_id, bool glb_trans)
+void get_source_blob(BurpGlobals* tdgbl, ISC_QUAD& blob_id, bool glb_trans, void (*postProcess) (BlobBuffer& segment))
 {
 /**************************************
  *
@@ -8895,7 +8917,7 @@ void get_source_blob(BurpGlobals* tdgbl, ISC_QUAD& blob_id, bool glb_trans)
 
 	// Allocate blob buffer if static buffer is too short
 	BlobBuffer static_buffer;
-	UCHAR* const buffer = static_buffer.getBuffer(length);
+	UCHAR* buffer = static_buffer.getBuffer(length);
 
 	while (length > 0)
 	{
@@ -8905,6 +8927,12 @@ void get_source_blob(BurpGlobals* tdgbl, ISC_QUAD& blob_id, bool glb_trans)
 		--p;
 		--length; // -- or ++ ??? p is decremented, will have to test.
 		const USHORT seg_len = p - buffer;
+
+		if (postProcess)
+		{
+			postProcess(static_buffer);
+			buffer = static_buffer.begin();
+		}
 
 		if (!blob.putSegment(seg_len, buffer))
 		{

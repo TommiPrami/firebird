@@ -2737,11 +2737,11 @@ static void clearAttributes(BlobBuffer& attr)
 	map.remove(ATTR_COLL_VERSION);
 	if (map.remove(ATTR_ICU_VERSION))
 	{
-		string currentIcu = UnicodeUtil::getDefaultIcuVersion();
+		const string currentIcu = UnicodeUtil::getDefaultIcuVersion();
 		map.put(ATTR_ICU_VERSION, currentIcu);
 	}
 
-	string tmp = IntlUtil::generateSpecificAttributes(ascii, map);
+	const string tmp = IntlUtil::generateSpecificAttributes(ascii, map);
 	attr.assign(reinterpret_cast<const UCHAR*>(tmp.c_str()), tmp.length());
 }
 

@@ -640,9 +640,7 @@ ULONG blb::BLB_get_data(thread_db* tdbb, UCHAR* buffer, SLONG length, bool close
 
 	while (length > 0)
 	{
-		// I have no idea why this limit is 32768 instead of 32767
-		// 1994-August-12 David Schnepper
-		USHORT n = (USHORT) MIN(length, (SLONG) 32768);
+		USHORT n = (USHORT) MIN(length, (SLONG) BLB_SEG_LIMIT);
 		n = BLB_get_segment(tdbb, p, n);
 		p += n;
 		length -= n;
@@ -1569,10 +1567,7 @@ void blb::BLB_put_data(thread_db* tdbb, const UCHAR* buffer, SLONG length)
 
 	while (length > 0)
 	{
-		// ASF: the comment below was copied from BLB_get_data
-		// I have no idea why this limit is 32768 instead of 32767
-		// 1994-August-12 David Schnepper
-		const USHORT n = (USHORT) MIN(length, (SLONG) 32768);
+		const USHORT n = (USHORT) MIN(length, (SLONG) BLB_SEG_LIMIT);
 		BLB_put_segment(tdbb, p, n);
 		p += n;
 		length -= n;
@@ -2154,7 +2149,7 @@ blb* blb::copy_blob(thread_db* tdbb, const bid* source, bid* destination,
 	HalfStaticArray<UCHAR, 2048> buffer;
 	UCHAR* buff = buffer.getBuffer(input->isSegmented() ?
 		input->blb_max_segment :
-		MIN(input->blb_length, 32768));
+		MIN(input->blb_length, BLB_SEG_LIMIT));
 
 	while (true)
 	{
@@ -2916,14 +2911,13 @@ static blb* store_array(thread_db* tdbb, jrd_tra* transaction, bid* blob_id)
 					array->arr_desc.iad_length);
 
 	// Write out actual array
-	const USHORT seg_limit = 32768;
 	const BLOB_PTR* p = array->arr_data;
 	SLONG length = array->arr_effective_length;
-	while (length > seg_limit)
+	while (length > BLB_SEG_LIMIT)
 	{
-		blob->BLB_put_segment(tdbb, p, seg_limit);
-		length -= seg_limit;
-		p += seg_limit;
+		blob->BLB_put_segment(tdbb, p, BLB_SEG_LIMIT);
+		length -= BLB_SEG_LIMIT;
+		p += BLB_SEG_LIMIT;
 	}
 
 	if (length)

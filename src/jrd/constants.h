@@ -481,4 +481,10 @@ const int WITH_ADMIN_OPTION = 2;
 // Max length of the string returned by ERROR_TEXT context variable
 const USHORT MAX_ERROR_MSG_LENGTH = 1024 * METADATA_BYTES_PER_CHAR; // 1024 UTF-8 characters
 
+// Segment size limit
+//		AP: the comment below was copied from blb.cpp:BLB_get_data
+//		I have no idea why this limit is 32768 instead of 32767
+//		1994-August-12 David Schnepper
+const USHORT BLB_SEG_LIMIT = 32768;
+
 #endif // JRD_CONSTANTS_H

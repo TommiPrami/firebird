@@ -998,6 +998,11 @@ int gbak(Firebird::UtilSvc* uSvc)
 				BURP_error(334, true, SafeArg() << in_sw_tab->in_sw_name);
 			tdgbl->gbl_sw_deactivate_indexes = true;
 			break;
+		case IN_SW_BURP_ICU:
+			if (tdgbl->gbl_sw_icu)
+				BURP_error(334, true, SafeArg() << in_sw_tab->in_sw_name);
+			tdgbl->gbl_sw_icu = true;
+			break;
 		case IN_SW_BURP_IG:
 			if (ignoreDamaged)
 				BURP_error(334, true, SafeArg() << in_sw_tab->in_sw_name);
@@ -1304,6 +1309,8 @@ int gbak(Firebird::UtilSvc* uSvc)
 			errNum = IN_SW_BURP_FIX_FSS_METADATA;
 		else if (tdgbl->gbl_sw_deactivate_indexes)
 			errNum = IN_SW_BURP_I;
+		else if (tdgbl->gbl_sw_icu)
+			errNum = IN_SW_BURP_ICU;
 		else if (tdgbl->gbl_sw_kill)
 			errNum = IN_SW_BURP_K;
 		else if (tdgbl->gbl_sw_mode)

@@ -1015,6 +1015,7 @@ public:
 	bool		gbl_sw_overwrite;
 	bool		gbl_sw_direct_io;
 	bool		gbl_sw_zip;
+	bool		gbl_sw_icu;
 	const SCHAR*	gbl_sw_keyholder;
 	const SCHAR*	gbl_sw_crypt;
 	const SCHAR*	gbl_sw_keyname;

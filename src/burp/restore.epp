@@ -160,7 +160,8 @@ bool	get_sql_roles(BurpGlobals* tdgbl);
 bool	get_mapping(BurpGlobals* tdgbl);
 bool	get_db_creator(BurpGlobals* tdgbl);
 bool	get_security_class(BurpGlobals* tdgbl);
-void	get_source_blob(BurpGlobals* tdgbl, ISC_QUAD&, bool, void (*postProcess) (BlobBuffer& segment) = nullptr);
+void	get_source_blob(BurpGlobals* tdgbl, ISC_QUAD&, bool,
+			void (*postProcess) (BurpGlobals* tdgbl, BlobBuffer& segment) = nullptr);
 USHORT	get_text(BurpGlobals* tdgbl, TEXT*, ULONG);
 USHORT	get_text2(BurpGlobals* tdgbl, TEXT* text, ULONG length);
 bool	get_trigger(BurpGlobals* tdgbl);
@@ -2725,8 +2726,11 @@ bool get_chk_constraint(BurpGlobals* tdgbl)
 	return true;
 }
 
-static void clearAttributes(BlobBuffer& attr)
+static void clearAttributes(BurpGlobals* tdgbl, BlobBuffer& attr)
 {
+	if (!tdgbl->gbl_sw_icu)
+		return;
+
 	charset cs;
 	IntlUtil::initAsciiCharset(&cs);
 	AutoPtr<CharSet> ascii(Firebird::CharSet::createInstance(*getDefaultMemoryPool(), 0, &cs));
@@ -8855,7 +8859,8 @@ bool get_security_class(BurpGlobals* tdgbl)
 	return true;
 }
 
-void get_source_blob(BurpGlobals* tdgbl, ISC_QUAD& blob_id, bool glb_trans, void (*postProcess) (BlobBuffer& segment))
+void get_source_blob(BurpGlobals* tdgbl, ISC_QUAD& blob_id, bool glb_trans,
+	void (*postProcess) (BurpGlobals* tdgbl, BlobBuffer& segment))
 {
 /**************************************
  *
@@ -8941,7 +8946,7 @@ void get_source_blob(BurpGlobals* tdgbl, ISC_QUAD& blob_id, bool glb_trans, void
 
 	if (postProcess)
 	{
-		postProcess(full_blob_buffer);
+		postProcess(tdgbl, full_blob_buffer);
 
 		const UCHAR* p = full_blob_buffer.begin();
 		FB_SIZE_T length = full_blob_buffer.getCount();

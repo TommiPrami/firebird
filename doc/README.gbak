@@ -112,3 +112,26 @@ use from caching it contents. Performance should not suffer as gbak uses
 sequential IO with relatively big chunks.
   Direct IO mode is silently ignored if backup file is redirected into standard
 input\output, i.e. if "stdin"\"stdout" is used as backup file name.
+
+
+
+gbak enhancements in Firebird v6.
+---------------------------------
+
+1.ICU version upgrade.
+
+Author: Alexander Peshkov <peshkoff at mail ru>
+
+During restore gbak changes ICU version to freshmost, present at your host.
+
+New switch
+-ICU
+
+Take into an account that when gbak utility executes at client box it's ICU
+version may differ from one on the server (or be missing at all). Therefore
+it's highly recommended to run restore with -icu option directly on server or
+using services.
+
+Samples:
+gbak -c -icu file.fbk file.fdb
+fbsvcmgr servername: user sysdba password masterkey action_restore dbname /dbs/some.fdb bkp_file /backups/some.fbk res_icu

@@ -566,6 +566,7 @@
 #define isc_spb_res_create				0x2000
 #define isc_spb_res_use_all_space		0x4000
 #define isc_spb_res_direct_io			isc_spb_bkp_direct_io
+#define isc_spb_res_icu					0x040000
 #define isc_spb_res_replica_mode		20
 
 /*****************************************

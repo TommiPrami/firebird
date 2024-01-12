@@ -101,6 +101,7 @@ const int IN_SW_BURP_REPLICA			= 53;	// replica mode
 
 const int IN_SW_BURP_PARALLEL_WORKERS	= 54;	// parallel workers
 const int IN_SW_BURP_DIRECT_IO			= 55;	// direct IO for backup files
+const int IN_SW_BURP_ICU				= 56;	// change ICU version to current in restored DB
 
 /**************************************************************************/
 
@@ -140,6 +141,8 @@ static const Switches::in_sw_tab_t reference_burp_in_sw_table[] =
 				// msg 303: @1FIX_FSS_METADATA	   fix malformed UNICODE_FSS metadata
 	{IN_SW_BURP_G,	  isc_spb_bkp_no_garbage_collect, "GARBAGE_COLLECT", 0, 0, 0, false, true,	177, 1, NULL, boBackup},
 				// msg 177:@1GARBAGE_COLLECT inhibit garbage collection
+	{IN_SW_BURP_ICU,  isc_spb_res_icu,				"ICU",			0, 0, 0, false, true,	411, 	3, NULL, boRestore},
+				// msg 411:change ICU version to current during restore
 	{IN_SW_BURP_I,	  isc_spb_res_deactivate_idx,	"INACTIVE",		0, 0, 0, false, true,	78, 	1, NULL, boRestore},
 				// msg 78:@1INACTIVE deactivate indexes during restore
 	{IN_SW_BURP_IG,   isc_spb_bkp_ignore_checksums,	"IGNORE", 		0, 0, 0, false, true,	178,	2, NULL, boBackup},

@@ -2734,10 +2734,10 @@ static void clearAttributes(BlobBuffer& attr)
 	IntlUtil::SpecificAttributesMap map;
 	IntlUtil::parseSpecificAttributes(ascii, attr.getCount(), attr.begin(), &map);
 
-	map.remove("ICU-VERSION");
-	map.remove("COLL-VERSION");
+	map.remove(ATTR_ICU_VERSION);
+	map.remove(ATTR_COLL_VERSION);
 	string currentIcu = UnicodeUtil::getDefaultIcuVersion();
-	map.put("ICU-VERSION", currentIcu);
+	map.put(ATTR_ICU_VERSION, currentIcu);
 
 	string tmp = IntlUtil::generateSpecificAttributes(ascii, map);
 	attr.assign(reinterpret_cast<const UCHAR*>(tmp.c_str()), tmp.length());

@@ -204,7 +204,15 @@ public:
 	public:
 		explicit StateReadGuard(thread_db* tdbb) : m_tdbb(tdbb)
 		{
-			lock(tdbb, LCK_WAIT);
+			try
+			{
+				lock(tdbb, LCK_WAIT);
+			}
+			catch (const Firebird::Exception&)
+			{
+				unlock(tdbb);
+				throw;
+			}
 		}
 
 		~StateReadGuard()
@@ -454,7 +462,7 @@ public:
 	bool writeDifference(thread_db* tdbb, FbStatusVector* status, ULONG diff_page, Ods::pag* page);
 	bool readDifference(thread_db* tdbb, ULONG diff_page, Ods::pag* page);
 	void flushDifference(thread_db* tdbb);
-	void setForcedWrites(const bool forceWrite, const bool notUseFSCache);
+	void setForcedWrites(const bool forceWrite);
 
 	void shutdown(thread_db* tdbb);
 

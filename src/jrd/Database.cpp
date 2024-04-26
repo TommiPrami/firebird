@@ -51,13 +51,16 @@ namespace Jrd
 {
 	bool Database::onRawDevice() const
 	{
-		const PageSpace* const pageSpace = dbb_page_manager.findPageSpace(DB_PAGE_SPACE);
+		const auto pageSpace = dbb_page_manager.findPageSpace(DB_PAGE_SPACE);
 		return pageSpace->onRawDevice();
 	}
 
 	ULONG Database::getIOBlockSize() const
 	{
-		if ((dbb_flags & DBB_no_fs_cache) || onRawDevice())
+		const auto pageSpace = dbb_page_manager.findPageSpace(DB_PAGE_SPACE);
+		fb_assert(pageSpace && pageSpace->file);
+
+		if ((pageSpace->file->fil_flags & FIL_no_fs_cache) || pageSpace->onRawDevice())
 			return DIRECT_IO_BLOCK_SIZE;
 
 		return PAGE_ALIGNMENT;
@@ -370,18 +373,6 @@ namespace Jrd
 			dbb_modules.add(module);
 	}
 
-	void Database::ensureGuid(thread_db* tdbb)
-	{
-		if (readOnly())
-			return;
-
-		if (!dbb_guid.Data1) // It would be better to full check but one field should be enough
-		{
-			GenerateGuid(&dbb_guid);
-			PAG_set_db_guid(tdbb, dbb_guid);
-		}
-	}
-
 	FB_UINT64 Database::getReplSequence(thread_db* tdbb)
 	{
 		USHORT length = sizeof(FB_UINT64);
@@ -475,6 +466,65 @@ namespace Jrd
 	{
 		dbb_gblobj_holder.assignRefNoIncr(GlobalObjectHolder::init(getUniqueFileId(),
 			dbb_filename, dbb_config));
+	}
+
+	// Methods encapsulating operations with vectors of known pages
+
+	ULONG Database::getKnownPagesCount(SCHAR ptype)
+	{
+		fb_assert(ptype == pag_transactions || ptype == pag_ids);
+
+		SyncLockGuard guard(&dbb_pages_sync, SYNC_SHARED, FB_FUNCTION);
+
+		const auto vector =
+			(ptype == pag_transactions) ? dbb_tip_pages :
+			(ptype == pag_ids) ? dbb_gen_pages :
+			nullptr;
+
+		return vector ? (ULONG) vector->count() : 0;
+	}
+
+	ULONG Database::getKnownPage(SCHAR ptype, ULONG sequence)
+	{
+		fb_assert(ptype == pag_transactions || ptype == pag_ids);
+
+		SyncLockGuard guard(&dbb_pages_sync, SYNC_SHARED, FB_FUNCTION);
+
+		const auto vector =
+			(ptype == pag_transactions) ? dbb_tip_pages :
+			(ptype == pag_ids) ? dbb_gen_pages :
+			nullptr;
+
+		if (!vector || sequence >= vector->count())
+			return 0;
+
+		return (*vector)[sequence];
+	}
+
+	void Database::setKnownPage(SCHAR ptype, ULONG sequence, ULONG value)
+	{
+		fb_assert(ptype == pag_transactions || ptype == pag_ids);
+
+		SyncLockGuard guard(&dbb_pages_sync, SYNC_EXCLUSIVE, FB_FUNCTION);
+
+		auto& rvector = (ptype == pag_transactions) ? dbb_tip_pages : dbb_gen_pages;
+
+		rvector = vcl::newVector(*dbb_permanent, rvector, sequence + 1);
+
+		(*rvector)[sequence] = value;
+	}
+
+	void Database::copyKnownPages(SCHAR ptype, ULONG count, ULONG* data)
+	{
+		fb_assert(ptype == pag_transactions || ptype == pag_ids);
+
+		SyncLockGuard guard(&dbb_pages_sync, SYNC_EXCLUSIVE, FB_FUNCTION);
+
+		auto& rvector = (ptype == pag_transactions) ? dbb_tip_pages : dbb_gen_pages;
+
+		rvector = vcl::newVector(*dbb_permanent, rvector, count);
+
+		memcpy(rvector->memPtr(), data, count * sizeof(ULONG));
 	}
 
 	// Database::Linger class implementation

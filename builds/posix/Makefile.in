@@ -187,7 +187,7 @@ ifeq ($(CLIENT_ONLY_FLG),N)
 	CC="$(CC)" CFLAGS="$(CFLAGS)" AR="$(AR)" $(MAKE) -C $(ROOT)/extern/btyacc
 endif
 
-	CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" $(MAKE) -C $(ROOT)/extern/cloop TARGET=release WITH_FPC=0 BUILD_DIR=$(TMP_ROOT)/cloop OUT_DIR=$(GEN_ROOT)/$(TARGET)/cloop core
+	CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)" LD_FLAGS="$(WLDFLAGS)" $(MAKE) -C $(ROOT)/extern/cloop TARGET=release WITH_FPC=0 BUILD_DIR=$(TMP_ROOT)/cloop OUT_DIR=$(GEN_ROOT)/$(TARGET)/cloop core
 
 	CC="$(CC)" CFLAGS="$(CFLAGS)" AR="$(AR)" $(MAKE) -C $(ROOT)/extern/decNumber
 	ln -sf $(ROOT)/extern/decNumber/libdecFloat.a $(STATIC_LIB)
@@ -790,18 +790,20 @@ install install-embedded silent_install package packages dist:
 
 .PHONY:	tests tests_process run_tests run_tests_process
 
+log_level ?= all
+
 tests:
 	$(MAKE) TARGET?=$(DefaultTarget) tests_process
 
 tests_process: $(COMMON_TEST) $(ENGINE_TEST) $(ISQL_TEST)
 
 run_tests:
-	$(MAKE) TARGET?=$(DefaultTarget) run_tests_process
+	$(MAKE) TARGET?=$(DefaultTarget) LOG_LEVEL?=$(log_level) run_tests_process
 
 run_tests_process: tests_process
-	$(COMMON_TEST) --log_level=all
-	$(ENGINE_TEST) --log_level=all
-	$(ISQL_TEST) --log_level=all
+	$(COMMON_TEST) --log_level=$(LOG_LEVEL)
+	$(ENGINE_TEST) --log_level=$(LOG_LEVEL)
+	$(ISQL_TEST) --log_level=$(LOG_LEVEL)
 
 
 #___________________________________________________________________________

@@ -227,11 +227,9 @@ const ULONG DBB_suspend_bgio			= 0x4000L;		// Suspend I/O by background threads
 const ULONG DBB_new						= 0x8000L;		// Database object is just created
 const ULONG DBB_gc_cooperative			= 0x10000L;		// cooperative garbage collection
 const ULONG DBB_gc_background			= 0x20000L;		// background garbage collection by gc_thread
-const ULONG DBB_no_fs_cache				= 0x40000L;		// Not using file system cache
-const ULONG DBB_sweep_starting			= 0x80000L;		// Auto-sweep is starting
-const ULONG DBB_creating				= 0x100000L;	// Database creation is in progress
-const ULONG DBB_shared					= 0x200000L;	// Database object is shared among connections
-//const ULONG DBB_closing					= 0x400000L;	// Database closing, special backgroud threads should exit
+const ULONG DBB_sweep_starting			= 0x40000L;		// Auto-sweep is starting
+const ULONG DBB_creating				= 0x80000L;	// Database creation is in progress
+const ULONG DBB_shared					= 0x100000L;	// Database object is shared among connections
 
 //
 // dbb_ast_flags
@@ -432,7 +430,7 @@ public:
 
 	MemoryPool* dbb_permanent;
 
-	Firebird::Guid dbb_guid;			// database GUID
+	std::optional<Firebird::Guid>	dbb_guid;		// database GUID
 
 	Firebird::SyncObject	dbb_sync;
 	Firebird::SyncObject	dbb_sys_attach;		// synchronize operations with dbb_sys_attachments
@@ -453,8 +451,6 @@ public:
 
 	Lock*		dbb_retaining_lock;		// lock for preserving commit retaining snapshot
 	PageManager dbb_page_manager;
-	vcl*		dbb_t_pages;			// pages number for transactions
-	vcl*		dbb_gen_id_pages;		// known pages for gen_id
 	BlobFilter*	dbb_blob_filters;		// known blob filters
 
 	MonitoringData*			dbb_monitoring_data;	// monitoring data
@@ -465,6 +461,10 @@ private:
 	Firebird::SyncObject dbb_modules_sync;
 	DatabaseModules	dbb_modules;		// external function/filter modules
 
+	// Vectors of known pages and their synchronization
+	Firebird::SyncObject dbb_pages_sync;	// guard access to dbb_XXX_pages vectors
+	vcl* dbb_tip_pages;						// known TIP pages
+	vcl* dbb_gen_pages;						// known generator pages
 public:
 	Firebird::AutoPtr<ExtEngineManager>	dbb_extManager;	// external engine manager
 
@@ -591,6 +591,12 @@ public:
 		return ENCODE_ODS(dbb_ods_version, dbb_minor_version);
 	}
 
+	// Methods encapsulating operations with vectors of known pages
+	ULONG getKnownPagesCount(SCHAR ptype);
+	ULONG getKnownPage(SCHAR ptype, ULONG sequence);
+	void setKnownPage(SCHAR ptype, ULONG sequence, ULONG value);
+	void copyKnownPages(SCHAR ptype, ULONG count, ULONG* data);
+
 private:
 	Database(MemoryPool* p, Firebird::IPluginConfig* pConf, bool shared)
 	:	dbb_permanent(p),
@@ -661,7 +667,6 @@ public:
 	static void garbage_collector(Database* dbb);
 	void exceptionHandler(const Firebird::Exception& ex, ThreadFinishSync<Database*>::ThreadRoutine* routine);
 
-	void ensureGuid(thread_db* tdbb);
 	FB_UINT64 getReplSequence(thread_db* tdbb);
 	void setReplSequence(thread_db* tdbb, FB_UINT64 sequence);
 	bool isReplicating(thread_db* tdbb);

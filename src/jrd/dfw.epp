@@ -4049,8 +4049,8 @@ static string remove_icu_info_from_attributes(const string& charsetName, const s
 		if (IntlUtil::parseSpecificAttributes(charSet, specificAttributes.length(),
 			(const UCHAR*) specificAttributes.begin(), &map))
 		{
-			map.remove("ICU-VERSION");
-			map.remove("COLL-VERSION");
+			map.remove(ATTR_ICU_VERSION);
+			map.remove(ATTR_COLL_VERSION);
 			return IntlUtil::generateSpecificAttributes(charSet, map);
 		}
 	}
@@ -4159,6 +4159,11 @@ static bool create_collation(thread_db* tdbb, SSHORT phase, DeferredWork* work, 
 	case 1:
 		setupSpecificCollationAttributes(tdbb, transaction, TTYPE_TO_CHARSET(work->dfw_id),
 			work->dfw_name.c_str(), false);
+		if (!INTL_defined_type(tdbb, work->dfw_id))
+		{
+			setupSpecificCollationAttributes(tdbb, transaction, TTYPE_TO_CHARSET(work->dfw_id),
+				work->dfw_name.c_str(), true);
+		}
 		break;
 	}
 

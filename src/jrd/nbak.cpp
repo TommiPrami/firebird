@@ -68,7 +68,6 @@
 IMPLEMENT_TRACE_ROUTINE(nbak_trace, "NBAK")
 #endif
 
-
 using namespace Jrd;
 using namespace Firebird;
 
@@ -226,12 +225,6 @@ void BackupManager::openDelta(thread_db* tdbb)
 {
 	fb_assert(!diff_file);
 	diff_file = PIO_open(tdbb, diff_name, diff_name);
-
-	if (database->dbb_flags & (DBB_force_write | DBB_no_fs_cache))
-	{
-		setForcedWrites(database->dbb_flags & DBB_force_write,
-						database->dbb_flags & DBB_no_fs_cache);
-	}
 }
 
 void BackupManager::closeDelta(thread_db* tdbb)
@@ -295,12 +288,6 @@ void BackupManager::beginBackup(thread_db* tdbb)
 	}
 
 	{ // logical scope
-		if (database->dbb_flags & (DBB_force_write | DBB_no_fs_cache))
-		{
-			setForcedWrites(database->dbb_flags & DBB_force_write,
-							database->dbb_flags & DBB_no_fs_cache);
-		}
-
 #ifdef UNIX
 		// adjust difference file access rights to make it match main DB ones
 		if (diff_file && geteuid() == 0)
@@ -342,15 +329,14 @@ void BackupManager::beginBackup(thread_db* tdbb)
 		if (!PIO_write(tdbb, diff_file, &temp_bdb, temp_bdb.bdb_buffer, tdbb->tdbb_status_vector))
 			ERR_punt();
 		NBAK_TRACE(("Set backup state in header"));
-		Guid guid;
-		GenerateGuid(&guid);
+
 		// Set state in database header page. All changes are written to main database file yet.
 		CCH_MARK_MUST_WRITE(tdbb, &window);
 		const int newState = Ods::hdr_nbak_stalled; // Should be USHORT?
 		header->hdr_flags = (header->hdr_flags & ~Ods::hdr_backup_mask) | newState;
 		const ULONG adjusted_scn = ++header->hdr_header.pag_scn; // Generate new SCN
-		PAG_replace_entry_first(tdbb, header, Ods::HDR_backup_guid, sizeof(guid),
-			reinterpret_cast<const UCHAR*>(&guid));
+		PAG_replace_entry_first(tdbb, header, Ods::HDR_backup_guid,
+			Guid::SIZE, Guid::generate().getData());
 
 		REPL_journal_switch(tdbb);
 
@@ -891,10 +877,10 @@ void BackupManager::flushDifference(thread_db* tdbb)
 	PIO_flush(tdbb, diff_file);
 }
 
-void BackupManager::setForcedWrites(const bool forceWrite, const bool notUseFSCache)
+void BackupManager::setForcedWrites(const bool forceWrite)
 {
 	if (diff_file)
-		PIO_force_write(diff_file, forceWrite, notUseFSCache);
+		PIO_force_write(diff_file, forceWrite);
 }
 
 BackupManager::BackupManager(thread_db* tdbb, Database* _database, int ini_state) :

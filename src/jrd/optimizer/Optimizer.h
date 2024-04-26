@@ -40,6 +40,7 @@
 #include "../dsql/ExprNodes.h"
 #include "../jrd/RecordSourceNodes.h"
 #include "../jrd/exe.h"
+#include "../jrd/recsrc/RecordSource.h"
 
 namespace Jrd {
 
@@ -500,6 +501,17 @@ public:
 	RecordSource* applyLocalBoolean(RecordSource* rsb,
 									const StreamList& streams,
 									ConjunctIterator& iter);
+	RecordSource* applyResidualBoolean(RecordSource* rsb);
+
+	BoolExprNode* composeBoolean(ConjunctIterator& iter,
+								 double* selectivity = nullptr);
+
+	BoolExprNode* composeBoolean(double* selectivity = nullptr)
+	{
+		auto iter = getBaseConjuncts();
+		return composeBoolean(iter, selectivity);
+	}
+
 	bool checkEquiJoin(BoolExprNode* boolean);
 	bool getEquiJoinKeys(BoolExprNode* boolean,
 						 NestConst<ValueExprNode>* node1,
@@ -529,9 +541,6 @@ private:
 						   RiverList& rivers,
 						   SortNode** sortClause,
 						   const PlanNode* planClause);
-	RecordSource* generateOuterJoin(RiverList& rivers,
-								    SortNode** sortClause);
-	RecordSource* generateResidualBoolean(RecordSource* rsb);
 	bool getEquiJoinKeys(NestConst<ValueExprNode>& node1,
 						 NestConst<ValueExprNode>& node2,
 						 bool needCast);
@@ -551,7 +560,7 @@ private:
 	unsigned baseParentConjuncts = 0;		// number of conjuncts in our rse + distributed with parent, next are parent
 	unsigned baseMissingConjuncts = 0;		// number of conjuncts in our and parent rse, but without missing
 
-	StreamList compileStreams, bedStreams, keyStreams, subStreams, outerStreams;
+	StreamList compileStreams, bedStreams, keyStreams, outerStreams;
 	ConjunctList conjuncts;
 };
 
@@ -598,6 +607,7 @@ struct IndexScratchSegment
 	bool excludeUpper = false;					// exclude upper bound value from scan
 	unsigned scope = 0;							// highest scope level
 	segmentScanType scanType = segmentScanNone;	// scan type
+	SSHORT scale = 0;							// scale for SINT64/Int128-based segment of index
 
 	MatchedBooleanList matches;					// matched booleans
 };
@@ -615,8 +625,8 @@ struct IndexScratch
 	unsigned lowerCount = 0;
 	unsigned upperCount = 0;
 	unsigned nonFullMatchedSegments = 0;
-	bool usePartialKey = false;				// Use INTL_KEY_PARTIAL
-	bool useMultiStartingKeys = false;		// Use INTL_KEY_MULTI_STARTING
+	bool usePartialKey = false;					// Use INTL_KEY_PARTIAL
+	bool useMultiStartingKeys = false;			// Use INTL_KEY_MULTI_STARTING
 	bool useRootListScan = false;
 
 	Firebird::ObjectsArray<IndexScratchSegment> segments;
@@ -893,6 +903,31 @@ private:
 	StreamInfoList innerStreams;
 	JoinedStreamList joinedStreams;
 	JoinedStreamList bestStreams;
+};
+
+class OuterJoin : private Firebird::PermanentStorage
+{
+	struct OuterJoinStream
+	{
+		RecordSource* rsb = nullptr;
+		StreamType number = INVALID_STREAM;
+	};
+
+public:
+	OuterJoin(thread_db* tdbb, Optimizer* opt,
+			  const RseNode* rse, RiverList& rivers,
+			  SortNode** sortClause);
+
+	RecordSource* generate();
+
+private:
+	RecordSource* process(const JoinType joinType);
+
+	thread_db* const tdbb;
+	Optimizer* const optimizer;
+	CompilerScratch* const csb;
+	SortNode** sortPtr;
+	OuterJoinStream joinStreams[2];
 };
 
 } // namespace Jrd

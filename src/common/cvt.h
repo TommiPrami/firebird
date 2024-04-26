@@ -97,9 +97,6 @@ Firebird::Int128 CVT_hex_to_int128(const char* str, USHORT len);
 USHORT CVT_make_string(const dsc*, USHORT, const char**, vary*, USHORT, Firebird::DecimalStatus, ErrorFunction);
 void CVT_move_common(const dsc*, dsc*, Firebird::DecimalStatus, Firebird::Callbacks*);
 void CVT_move(const dsc*, dsc*, Firebird::DecimalStatus, ErrorFunction);
-SSHORT CVT_decompose(const char*, USHORT, SSHORT*, ErrorFunction);
-SSHORT CVT_decompose(const char*, USHORT, SLONG*, ErrorFunction);
-SSHORT CVT_decompose(const char*, USHORT, SINT64*, ErrorFunction);
 SSHORT CVT_decompose(const char*, USHORT, Firebird::Int128*, ErrorFunction);
 USHORT CVT_get_string_ptr(const dsc*, USHORT*, UCHAR**, vary*, USHORT, Firebird::DecimalStatus, ErrorFunction);
 USHORT CVT_get_string_ptr_common(const dsc*, USHORT*, UCHAR**, vary*, USHORT, Firebird::DecimalStatus, Firebird::Callbacks*);
@@ -109,7 +106,7 @@ void CVT_string_to_datetime(const dsc*, ISC_TIMESTAMP_TZ*, bool*, const Firebird
 	bool, Firebird::Callbacks*);
 const UCHAR* CVT_get_bytes(const dsc*, unsigned&);
 Firebird::string CVT_datetime_to_format_string(const dsc* desc, const Firebird::string& format, Firebird::Callbacks* cb);
-ISC_TIMESTAMP_TZ CVT_string_to_format_datetime(const dsc* desc, const Firebird::string& format, Firebird::Callbacks* cb,
-	const Firebird::EXPECT_DATETIME expectedType);
+ISC_TIMESTAMP_TZ CVT_string_to_format_datetime(const dsc* desc, const Firebird::string& format,
+	const Firebird::EXPECT_DATETIME expectedType, Firebird::Callbacks* cb);
 
 #endif //COMMON_CVT_H

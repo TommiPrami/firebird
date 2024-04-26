@@ -4190,7 +4190,6 @@ const
 	isc_info_svc_limbo_trans = byte(66);
 	isc_info_svc_running = byte(67);
 	isc_info_svc_get_users = byte(68);
-	isc_info_svc_auth_block = byte(69);
 	isc_info_svc_stdin = byte(78);
 	isc_spb_sec_userid = byte(5);
 	isc_spb_sec_groupid = byte(6);
@@ -5725,6 +5724,9 @@ const
 	 isc_incorrect_hours_period = 335545299;
 	 isc_data_for_format_is_exhausted = 335545300;
 	 isc_trailing_part_of_string = 335545301;
+	 isc_pattern_cant_be_used_without_other_pattern = 335545302;
+	 isc_pattern_cant_be_used_without_other_pattern_and_vice_versa = 335545303;
+	 isc_incompatible_format_patterns = 335545304;
 	 isc_gfix_db_name = 335740929;
 	 isc_gfix_invalid_sw = 335740930;
 	 isc_gfix_incmp_sw = 335740932;

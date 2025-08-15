@@ -505,7 +505,7 @@ begin
   Result := GetRegistryEntry( RootKey, RegKey, RegEntry );
 
   if Result = '' then
-    Result := ExpandConstant('{pf}') + '\Firebird\Firebird_' + IntToStr( Product_ID) + '_0';
+    Result := ExpandConstant('{commonpf}') + '\Firebird\Firebird_' + IntToStr( Product_ID) + '_0';
 end;
 
 
